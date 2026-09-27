@@ -12,6 +12,7 @@ except ImportError:
 
 from core.undo import push_undo
 from core import confirm as confirm_gate
+from core import confirm as confirm_gate
 
 _OS = platform.system()  # "Windows" | "Darwin" | "Linux"
 
