@@ -487,7 +487,16 @@ TOOL_DECLARATIONS = [
             },
             "required": [],
         },
-    },
+    },,
+    {
+        "name": "sleep_robin",
+        "description": "Put Robin into sleep mode immediately. While asleep, Robin does not send the microphone to Gemini and waits for the user to say 'Robin' or press Escape to wake.",
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {},
+            "required": []
+        },
+    }
 ]
 
 class _ReconnectSignal(Exception):
@@ -1243,6 +1252,10 @@ class JarvisLive:
                     result = ("Monitoring: " + ", ".join(topics)) if topics else "No topics are being monitored."
                 else:
                     result = "Specify action (add/remove/list) and a topic."
+
+            elif name == "sleep_robin":
+                self.sleep(reason="user requested sleep")
+                result = "Robin is sleeping. Say 'Robin' or press Escape to wake me."
 
             elif name == "shutdown_jarvis":
                 self.ui.write_log("SYS: Shutdown requested.")
