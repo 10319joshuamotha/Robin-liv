@@ -11,6 +11,7 @@ _HOST = "127.0.0.1"
 _PORT = 8765
 _lock = threading.Lock()
 _tabs: list[dict] = []
+_clients: dict[str, list[dict]] = {}
 _commands: list[dict] = []
 _results: dict[str, dict] = {}
 _server = None
@@ -42,6 +43,10 @@ class _Handler(BaseHTTPRequestHandler):
         p = urlparse(self.path)
         if p.path == "/tabs":
             with _lock:
+                merged = []
+                for client_tabs in _clients.values():
+                    merged.extend(client_tabs)
+                _tabs[:] = merged
                 return self._json(200, {"tabs": list(_tabs)})
         if p.path == "/poll":
             q = parse_qs(p.query)
@@ -66,8 +71,13 @@ class _Handler(BaseHTTPRequestHandler):
         except Exception:
             return self._json(400, {"error": "invalid json"})
         if p.path == "/tabs":
+            client = str(data.get("client", "default"))
             with _lock:
-                _tabs[:] = [t for t in data.get("tabs", []) if not t.get("incognito")]
+                _clients[client] = [t for t in data.get("tabs", []) if not t.get("incognito")]
+                merged = []
+                for client_tabs in _clients.values():
+                    merged.extend(client_tabs)
+                _tabs[:] = merged
             return self._json(200, {"ok": True})
         if p.path == "/result":
             rid = str(data.get("id", ""))
