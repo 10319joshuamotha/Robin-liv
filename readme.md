@@ -405,3 +405,27 @@ Engineered by a developer building a real-world JARVIS-style assistant.
 | --- | --- |
 | YouTube | [@FatihMakes](https://www.youtube.com/@FatihMakes) |
 | Instagram | [@fatihmakes](https://www.instagram.com/fatihmakes) |
+
+
+## Robin LIV desktop companion
+
+This fork runs the assistant as a small always-on-top Robin-style desktop companion instead of the large HUD during normal use.
+
+### Voice and wake
+
+- Assistant identity defaults to Robin.
+- Gemini Live defaults to the Aoede voice.
+- The local wake detector listens for "Robin" while sleeping.
+- On Windows, Esc is a global wake key when Robin is asleep; while awake it interrupts speech.
+
+### Files and apps
+
+The existing action system remains available for opening installed applications and working with files/folders. Deleting a file or folder now requires a human confirmation on the Robin overlay before the action is performed.
+
+### Browser tabs
+
+The fork includes browser_extension/ and actions/browser_bridge.py. After loading the extension into a Chromium-based browser, Robin can enumerate all normal tabs, including background tabs, while filtering out incognito/private tabs. It can also request page text for a selected tab.
+
+The browser extension communicates only with the local 127.0.0.1:8765 bridge. It does not intentionally send tab contents to a remote service.
+
+See browser_extension/README.md for installation.
