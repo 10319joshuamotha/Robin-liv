@@ -49,6 +49,7 @@ import numpy as np
 from google import genai
 from google.genai import types
 from ui import JarvisUI
+from actions.browser_bridge import start_bridge
 from memory.memory_manager import (
     load_memory, update_memory, format_memory_for_prompt,
     save_session_summary, pop_last_session,
@@ -636,6 +637,11 @@ class JarvisLive:
         self._awake            = not self._wake_enabled
         self._wake_detector: WakeWordDetector | None = None
         self._wake_sleep_timeout = WAKE_SLEEP_TIMEOUT
+        try:
+            start_bridge()
+        except Exception:
+            pass
+        self._start_global_escape_watcher()
 
         # Restore the saved push-to-talk preference. Doing it here rather than
         # in __init__ means the hotkey thread only exists once there is a
@@ -673,8 +679,8 @@ class JarvisLive:
         return True
 
     def _on_wake_detected(self) -> None:
-        """Called from the detector thread when 'Hey Jarvis' is heard."""
-        self.wake(reason="wake word")
+        """Called from the detector thread when 'Robin' is heard."""
+        self.wake(reason="Robin")
 
     def wake(self, reason: str = "wake word") -> None:
         if self._awake:
@@ -955,10 +961,10 @@ class JarvisLive:
         # Load customization from config
         try:
             _cfg = json.loads(open(API_CONFIG_PATH, encoding="utf-8").read())
-            self._asst_name = (_cfg.get("assistant_name") or "JARVIS").strip()
+            self._asst_name = (_cfg.get("assistant_name") or "Robin").strip()
             _user_name = (_cfg.get("user_name") or "").strip()
         except Exception:
-            self._asst_name = "JARVIS"
+            self._asst_name = "Robin"
             _user_name = ""
 
         memory     = load_memory()
