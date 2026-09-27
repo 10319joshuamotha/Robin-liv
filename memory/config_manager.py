@@ -53,7 +53,7 @@ def is_configured() -> bool:
 
 def get_assistant_name() -> str:
     """Return the configured assistant name, or 'JARVIS' if not set."""
-    return load_api_keys().get("assistant_name", "JARVIS") or "JARVIS"
+    return load_api_keys().get("assistant_name", "Robin") or "Robin"
 
 
 def get_user_name() -> str:
@@ -106,7 +106,7 @@ def save_voice(voice_name: str) -> None:
 
 def get_wake_word_enabled() -> bool:
     """Whether local wake-word gating is on (assistant sleeps until 'Hey Jarvis')."""
-    return load_api_keys().get("wake_word_enabled", False)
+    return load_api_keys().get("wake_word_enabled", True)
 
 
 def save_wake_word_enabled(enabled: bool) -> None:
