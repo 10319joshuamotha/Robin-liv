@@ -38,6 +38,11 @@ try:
 except Exception:      # pragma: no cover — HUD must never die over cosmetics
     HoloAvatar = None
 
+try:
+    from core.robin_overlay import RobinOverlay
+except Exception:
+    RobinOverlay = None
+
 
 def _base_dir() -> Path:
     if getattr(sys, "frozen", False):
@@ -5218,6 +5223,13 @@ class JarvisUI:
         self._app = QApplication.instance() or QApplication(sys.argv)
         self._app.setStyle("Fusion")
         self._win = MainWindow(face_path)
+        self._robin = RobinOverlay() if RobinOverlay is not None else None
+        if self._robin is not None:
+            try:
+                from core import confirm as _confirm_gate
+                self._robin.confirmed.connect(_confirm_gate.resolve)
+            except Exception:
+                pass
         self.root = _RootShim(self._app)
         self._win.show()
 
@@ -5374,9 +5386,16 @@ class JarvisUI:
 
     def set_state(self, state: str):
         self._win._state_sig.emit(state)
+        if self._robin is not None:
+            self._robin.set_state(state)
+            if self._win._ready:
+                self._win.hide()
+                self._robin.show()
 
     def write_log(self, text: str):
         self._win._log_sig.emit(text)
+        if self._robin is not None and str(text).strip():
+            self._robin.set_message(str(text).replace("SYS:", "").strip())
 
     def wait_for_api_key(self):
         while not self._win._ready:

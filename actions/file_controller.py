@@ -13,6 +13,7 @@ except ImportError:
 from core.undo import push_undo
 from core import confirm as confirm_gate
 from core import confirm as confirm_gate
+from core import confirm as confirm_gate
 
 _OS = platform.system()  # "Windows" | "Darwin" | "Linux"
 
@@ -672,7 +673,14 @@ def file_controller(
             return create_folder(path, name=name)
 
         elif action == "delete":
-            return delete_file(path, name=name)
+            target = (_resolve_path(path) / name) if name else _resolve_path(path)
+            target_label = str(target)
+            return confirm_gate.request(
+                key="delete_file",
+                title=f"Delete '{Path(target_label).name}'",
+                detail=f"This will move {target_label} to the Recycle Bin/Trash. Confirm before continuing.",
+                run=lambda p=path, n=name: delete_file(p, name=n),
+            )
 
         elif action == "move":
             return move_file(path, name=name, destination=params.get("destination", ""))
