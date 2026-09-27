@@ -658,6 +658,28 @@ class JarvisLive:
         self.ui.on_wake_manual   = self._ui_wake_manual   # () -> toggle awake/asleep
         self.ui.on_wake_install  = self._ui_wake_install  # () -> (ok, msg)
 
+    def _start_global_escape_watcher(self):
+        """Keep Escape available while the large control window is hidden."""
+        if _platform.system() != "Windows":
+            return
+        def _loop():
+            import ctypes
+            user32 = ctypes.windll.user32
+            was_down = False
+            while True:
+                try:
+                    down = bool(user32.GetAsyncKeyState(0x1B) & 0x8000)
+                    if down and not was_down:
+                        if self._awake:
+                            self.interrupt()
+                        else:
+                            self.wake(reason="Escape key")
+                    was_down = down
+                    time.sleep(0.05)
+                except Exception:
+                    time.sleep(0.5)
+        threading.Thread(target=_loop, daemon=True, name="RobinGlobalEscape").start()
+
     # ── Wake word: state machine ─────────────────────────────────────────────
 
     def _wake_state(self) -> dict:
