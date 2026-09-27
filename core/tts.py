@@ -105,7 +105,7 @@ def _play_audio_bytes(audio_bytes: bytes) -> None:
 class EdgeTTSEngine:
     """Microsoft EdgeTTS – free, requires internet."""
 
-    def __init__(self, voice: str = "en-US-GuyNeural"):
+    def __init__(self, voice: str = "en-US-JennyNeural"):
         self.voice = voice
 
     def speak(self, text: str) -> None:
@@ -437,6 +437,6 @@ def create_tts_player(config: dict) -> TTSPlayer:
         voice_id = config.get("tts_voice", "pNInz6obpgDQGcFmaJgB")
         engine   = ElevenLabsTTSEngine(api_key=api_key, voice_id=voice_id)
     else:   # edgetts (default)
-        voice  = config.get("tts_voice", "en-US-GuyNeural")
+        voice  = config.get("tts_voice", "en-US-JennyNeural")
         engine = EdgeTTSEngine(voice=voice)
     return TTSPlayer(engine)
