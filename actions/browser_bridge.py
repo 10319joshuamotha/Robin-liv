@@ -136,3 +136,34 @@ def inspect_tab(tab_id: int, browser: str = "") -> str:
         return "Timed out waiting for the browser extension."
     except Exception as e:
         return f"Browser inspection failed: {e}"
+
+
+def browser_tabs(action: str = "list", tab_id: int = 0, include_content: bool = False,
+                  browser: str = "") -> str:
+    """Voice-facing browser tab control."""
+    action = (action or "list").strip().lower()
+    if action in ("list", "tabs", "all"):
+        return list_tabs(include_content=include_content)
+    if action in ("inspect", "read", "understand") and tab_id:
+        return inspect_tab(int(tab_id), browser=browser)
+    return "Specify action=list or action=inspect with a tab_id."
+
+TOOL = {
+    "name": "browser_tabs",
+    "description": (
+        "See all connected normal browser tabs, including background tabs, "
+        "excluding incognito/private tabs. Use action=list to enumerate tabs; "
+        "use action=inspect with tab_id to read the visible page text and understand its contents."
+    ),
+    "parameters": {
+        "type": "OBJECT",
+        "properties": {
+            "action": {"type": "STRING", "description": "list or inspect"},
+            "tab_id": {"type": "INTEGER", "description": "Tab id returned by list"},
+            "include_content": {"type": "BOOLEAN", "description": "Reserved for compatibility; inspect reads page text"},
+            "browser": {"type": "STRING", "description": "Optional browser client id"}
+        },
+        "required": []
+    },
+    "handler": browser_tabs,
+}
