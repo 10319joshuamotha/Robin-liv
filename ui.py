@@ -385,7 +385,7 @@ class _SysMetrics:
 _metrics = _SysMetrics()
 
 class HudCanvas(QWidget):
-    def __init__(self, face_path: str, assistant_name: str = "J.A.R.V.I.S", parent=None):
+    def __init__(self, face_path: str, assistant_name: str = "Robin", parent=None):
         super().__init__(parent)
         self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent)
         self.setMinimumSize(300, 300)
@@ -1601,7 +1601,7 @@ class CustomizeOverlay(QWidget):
     saved = pyqtSignal(str, str, str, str)   # assistant_name, user_name, ui_color, voice
     _OW, _OH = 400, 588
 
-    def __init__(self, assistant_name="JARVIS", user_name="",
+    def __init__(self, assistant_name="Robin", user_name="",
                  ui_color=DEFAULT_UI_COLOR, voice="", parent=None):
         super().__init__(parent)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
@@ -1807,7 +1807,7 @@ class CustomizeOverlay(QWidget):
         self.hide()
 
     def _save(self):
-        name = self._name_input.text().strip() or "JARVIS"
+        name = self._name_input.text().strip() or "Robin"
         user = self._user_input.text().strip()
         self.saved.emit(name, user, self._sel_color or DEFAULT_UI_COLOR, self._sel_voice)
         self.hide()
@@ -2943,7 +2943,7 @@ class MainWindow(QMainWindow):
 
         # Load customization from config
         _cfg = _read_full_config()
-        self._assistant_name: str = (_cfg.get("assistant_name") or "JARVIS").strip()
+        self._assistant_name: str = (_cfg.get("assistant_name") or "Robin").strip()
         _display = self._assistant_name.upper()
 
         # Apply the saved UI colour BEFORE panels/stylesheets are built
