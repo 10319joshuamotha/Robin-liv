@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "purpose": "Domain map for Robin's engineering and science reasoning layer.",
+  "domains": {
+    "mechanics": ["statics","dynamics","kinematics","strength_of_materials","machine_design","gears","bearings","shafts","vibration","thermodynamics","fluid_mechanics","manufacturing","materials","engineering_drawing","CAD"],
+    "chemistry": ["general_chemistry","organic","inorganic","physical_chemistry","stoichiometry","thermochemistry","equilibrium","acids_bases","electrochemistry","corrosion","materials","laboratory_safety"],
+    "physics": ["mechanics","energy","momentum","rotation","gravitation","thermodynamics","waves","optics","electricity_magnetism","modern_physics","quantum_basics"],
+    "electrical": ["DC_circuits","AC_circuits","Ohms_law","Kirchhoff_laws","power","transformers","motors","generators","batteries","wiring","control_systems","power_electronics","measurements"],
+    "electronics": ["diodes","transistors","MOSFETs","op_amps","analog","digital_logic","microcontrollers","sensors","embedded_systems","PCB","signal_integrity","troubleshooting"],
+    "autocad": ["drawing_commands","layers","blocks","dimensions","coordinates","object_snaps","polylines","offset","trim","extend","fillet","chamfer","array","hatch","layouts","paper_space","model_space","AutoLISP"]
+  },
+  "reasoning_policy": [
+    "Use equations and dimensional analysis for quantitative questions.",
+    "Show assumptions when a result depends on missing parameters.",
+    "Use calculator tools for arithmetic instead of mental estimation when practical.",
+    "Distinguish educational guidance from professional engineering, electrical, or chemical safety advice.",
+    "For hazardous procedures, prefer safety information and conservative limits over procedural optimization."
+  ],
+  "reference_policy": "Prefer authoritative, current, openly licensed or permission-cleared sources. Do not ingest copyrighted textbooks into model training without permission."
+}
