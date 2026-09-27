@@ -12,7 +12,7 @@ async function syncTabs() {
   try {
     const tabs = await api.tabs.query({});
     const normal = tabs.filter(t => !t.incognito).map(t => ({
-      id:t.id, windowId:t.windowId, browser: navigator.userAgent.includes("Edg/") ? "edge" : "chromium",
+      id:t.id, windowId:t.windowId, client:CLIENT, browser: navigator.userAgent.includes("Edg/") ? "edge" : "chromium",
       title:t.title || "", url:t.url || "", active:!!t.active, incognito:false
     }));
     await post("/tabs", {client:CLIENT, tabs:normal});
