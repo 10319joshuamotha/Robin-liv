@@ -5278,10 +5278,14 @@ class JarvisUI:
         """Thread-safe: raise the irreversible-action gate. Called from action
         handlers running in executor threads, so it goes through a signal."""
         self._win._confirm_sig.emit(str(title)[:120], str(detail)[:300])
+        if self._robin is not None:
+            self._robin.show_confirmation(str(title), str(detail))
 
     def hide_confirm(self) -> None:
         """Thread-safe: take the gate down."""
         self._win._confirm_hide_sig.emit()
+        if self._robin is not None:
+            self._robin.hide_confirmation()
 
     @property
     def get_plugins(self):
