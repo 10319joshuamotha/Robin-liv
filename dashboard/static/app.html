@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>JARVIS Dashboard</title>
+  <title>Robin Companion</title>\n  <link rel="manifest" href="/manifest.webmanifest">\n  <meta name="theme-color" content="#07090f">
   <script src="/static/crypto.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -208,19 +208,38 @@
 
     const _wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
     const _wsUrl   = `${_wsProto}://${location.host}/ws?token=${encodeURIComponent(_authToken)}`;
-    const ws       = new WebSocket(_wsUrl);
+    let ws = null;
+    let _reconnectTimer = null;
+    let _reconnectDelay = 1000;
 
-    ws.onopen    = () => { sys('Remote session active.'); toast('Connected to JARVIS'); };
-    ws.onclose   = () => sys('Connection lost — refresh to reconnect.');
-    ws.onerror   = () => sys('Connection error.');
-    ws.onmessage = (e) => {
-      const m = JSON.parse(e.data);
-      if (m.type === 'log')           append(m.speaker, m.text);
-      if (m.type === 'status')        setStatus(m.state);
-      if (m.type === 'wake')          sys('Wake word detected — connecting…');
-      if (m.type === 'sys')           sys(m.text);
-      if (m.type === 'file_received') _onFileReceived(m);
-    };
+    function connectSocket() {
+      if (!_authToken) return;
+      try { ws = new WebSocket(_wsUrl); } catch { scheduleReconnect(); return; }
+      ws.onopen = () => {
+        _reconnectDelay = 1000;
+        sys('Remote session active.');
+        toast('Connected to Robin');
+      };
+      ws.onclose = () => { sys('Connection lost — reconnecting…'); scheduleReconnect(); };
+      ws.onerror = () => { try { ws.close(); } catch {} };
+      ws.onmessage = (e) => {
+        const m = JSON.parse(e.data);
+        if (m.type === 'log') append(m.speaker, m.text);
+        if (m.type === 'status') setStatus(m.state);
+        if (m.type === 'wake') sys('Wake word detected — connecting…');
+        if (m.type === 'sys') sys(m.text);
+        if (m.type === 'file_received') _onFileReceived(m);
+      };
+    }
+    function scheduleReconnect() {
+      if (_reconnectTimer) return;
+      _reconnectTimer = setTimeout(() => {
+        _reconnectTimer = null;
+        _reconnectDelay = Math.min(_reconnectDelay * 2, 15000);
+        connectSocket();
+      }, _reconnectDelay);
+    }
+    connectSocket();
 
     function setStatus(s) {
       if (s === 'active') {
@@ -555,5 +574,8 @@
       _micIdle();
     }
   </script>
+<script>
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/service-worker.js').catch(()=>{});
+</script>
 </body>
 </html>
