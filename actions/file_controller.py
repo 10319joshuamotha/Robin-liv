@@ -11,6 +11,7 @@ except ImportError:
     _SEND2TRASH = False
 
 from core.undo import push_undo
+from core import confirm as confirm_gate
 
 _OS = platform.system()  # "Windows" | "Darwin" | "Linux"
 
