@@ -543,6 +543,34 @@ class DashboardServer:
             return bool(tok) and tok in self._tokens
 
         # serve CryptoJS from local cache, fallback to CDN redirect
+        @app.get("/manifest.webmanifest")
+        async def manifest():
+            return JSONResponse({
+                "name": "Robin Companion",
+                "short_name": "Robin",
+                "start_url": "/",
+                "display": "standalone",
+                "background_color": "#07090f",
+                "theme_color": "#07090f",
+                "icons": []
+            }, media_type="application/manifest+json")
+
+        @app.get("/service-worker.js")
+        async def service_worker():
+            from fastapi.responses import Response
+            return Response(
+                content="""const CACHE = 'robin-companion-v1';
+self.addEventListener('install', e => self.skipWaiting());
+self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
+self.addEventListener('fetch', e => {
+  if (e.request.method === 'GET' && e.request.url.includes('/manifest.webmanifest')) {
+    e.respondWith(fetch(e.request));
+  }
+});""",
+                media_type="application/javascript",
+                headers={"Cache-Control": "no-store"}
+            )
+
         @app.get("/static/crypto.js")
         async def serve_crypto():
             if _CRYPTOJS_FILE.exists():
