@@ -429,3 +429,17 @@ The fork includes browser_extension/ and actions/browser_bridge.py. After loadin
 The browser extension communicates only with the local 127.0.0.1:8765 bridge. It does not intentionally send tab contents to a remote service.
 
 See browser_extension/README.md for installation.
+
+
+## Installation readiness
+
+This build includes approval-gated self-development with a clean-working-tree requirement, exact-commit binding, single-file patch validation, protected safety files, syntax validation, and targeted rollback. Self-development creates an isolated `robin/self-dev-*` branch and never merges into `main` automatically.
+
+Validation runs on Python 3.11, 3.12, and 3.13 through GitHub Actions. For local installation:
+
+```bash
+python setup.py
+python main.py
+```
+
+Enter the Gemini API key in the application on first launch; do not commit `config/api_keys.json`.
