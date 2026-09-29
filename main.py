@@ -487,7 +487,7 @@ TOOL_DECLARATIONS = [
             },
             "required": [],
         },
-    },,
+    },
     {
         "name": "sleep_robin",
         "description": "Put Robin into sleep mode immediately. While asleep, Robin does not send the microphone to Gemini and waits for the user to say 'Robin' or press Escape to wake.",
