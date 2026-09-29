@@ -62,9 +62,10 @@ A second copy of the **core installation package** should be buildable/exportabl
 
 - Passwords, tokens, API keys and other secrets must be encrypted at rest.
 - Plaintext passwords must never be written to ordinary knowledge files, prompts, logs or Git.
-- Financial/GPay/payment capabilities are disabled by default and require the separately defined multi-step authorization flow before any future implementation can expose them.
-- Gallery/screen access is capability-gated and must obey Private Mode and one-shot media authorization.
-- Private Mode and PC Sleep are enforced by the runtime state/capability layer, not by model instructions alone.
+- Financial/GPay/payment capabilities are **completely forbidden by policy**. No voice confirmation, biometric confirmation, or multi-step verification can enable them.
+- Gallery/photo access is denied by default and may be authorized only for one explicitly selected picture/tab/task.
+- Screen access must obey Private Mode and the same capability boundary.
+- Private Mode and PC Sleep are enforced by runtime state/capability code, not by model instructions alone.
 
 ## Installation segregation
 
