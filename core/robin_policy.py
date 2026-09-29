@@ -35,7 +35,13 @@ class PolicyDecision:
 
 
 class RobinPolicy:
-    """Deny-by-default policy for sensitive capabilities."""
+    """Deny-by-default policy for sensitive capabilities.
+
+    Finance is a hard prohibition: no voice confirmation, biometric confirmation,
+    or three-step verification can authorize it. Gallery access is the opposite:
+    it is denied by default but can be granted for one explicitly named picture
+    or tab, matching Robin's requested privacy model.
+    """
 
     def decide(
         self,
@@ -47,17 +53,16 @@ class RobinPolicy:
         private_mode: bool = False,
         explicit_media_grant: bool = False,
     ) -> PolicyDecision:
+        # Money/payment/banking operations are completely forbidden.
+        if capability is Capability.FINANCE:
+            return PolicyDecision(
+                False,
+                "Financial and payment operations are permanently forbidden by Robin policy.",
+                AuthorizationLevel.NONE,
+            )
+
         if not authenticated:
             return PolicyDecision(False, "User authentication is required.", AuthorizationLevel.USER)
-
-        if capability is Capability.FINANCE:
-            if not multi_step_verified:
-                return PolicyDecision(
-                    False,
-                    "Financial actions require three-step verification.",
-                    AuthorizationLevel.MULTI_STEP,
-                )
-            return PolicyDecision(True, "Three-step financial verification satisfied.", AuthorizationLevel.MULTI_STEP)
 
         if capability is Capability.CREDENTIALS and not confirmed:
             return PolicyDecision(False, "Credential use requires explicit confirmation.", AuthorizationLevel.CONFIRMED)
@@ -68,7 +73,7 @@ class RobinPolicy:
         if capability is Capability.GALLERY:
             if not explicit_media_grant:
                 return PolicyDecision(False, "Gallery access requires an explicit picture/tab grant.", AuthorizationLevel.CONFIRMED)
-            return PolicyDecision(True, "Explicit media grant accepted for this task.", AuthorizationLevel.CONFIRMED, one_shot=True)
+            return PolicyDecision(True, "Explicit media grant accepted for this task only.", AuthorizationLevel.CONFIRMED, one_shot=True)
 
         if capability in {Capability.PHONE_CONTROL, Capability.PC_CONTROL} and not confirmed:
             return PolicyDecision(False, "Device control requires explicit confirmation.", AuthorizationLevel.CONFIRMED)
