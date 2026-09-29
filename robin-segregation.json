@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "compatibility": "robin-1",
+  "platforms": ["windows", "android"],
+  "storage": {
+    "core": [
+      "runtime",
+      "dependencies",
+      "security",
+      "authentication",
+      "capability_policy",
+      "offline_speech",
+      "animation_runtime",
+      "device_transport",
+      "boot_index"
+    ],
+    "external": [
+      "long_term_memory",
+      "profile_knowledge",
+      "relationship_context",
+      "engineering_references",
+      "chemistry_and_periodic_table",
+      "user_documents",
+      "conversation_archives",
+      "large_model_and_reference_assets",
+      "historical_logs",
+      "backups"
+    ],
+    "optional": [],
+    "generated": [
+      "runtime_logs",
+      "indexes",
+      "cache",
+      "device_pairing_metadata"
+    ]
+  },
+  "external_drive": {
+    "required_capacity_gb": 117,
+    "identification": "robin_manifest_marker",
+    "fixed_drive_letter_required": false,
+    "usb_absent_behavior": "external_memory_unavailable"
+  },
+  "security": {
+    "plaintext_credentials_allowed": false,
+    "financial_capabilities": "forbidden",
+    "gallery_default": "deny",
+    "gallery_authorization": "one_shot_explicit",
+    "phone_private_mode": "deny_screen_and_phone_data",
+    "pc_sleep": "stop_processing_until_wake"
+  },
+  "portable_copy": {
+    "core_copy_allowed": true,
+    "external_data_copy_allowed": true,
+    "device_specific_auth_material_copy": false,
+    "plaintext_secrets_copy": false
+  }
+}
