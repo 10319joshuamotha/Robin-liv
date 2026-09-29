@@ -80,7 +80,7 @@ def resolve_storage(brain_root: Path) -> RobinStorage:
     return RobinStorage(brain_root=root, external_root=resolve_external_root(root))
 
 
-def initialize_external_layout(external_root: Path) -> RobinStorage:
+def initialize_external_layout(external_root: Path, brain_root: Path) -> RobinStorage:
     """Create only Robin's top-level external directories.
 
     This is intentionally not called automatically at startup. Formatting or
@@ -92,4 +92,4 @@ def initialize_external_layout(external_root: Path) -> RobinStorage:
     (external_root / EXTERNAL_MARKER).touch(exist_ok=True)
     for name in ("knowledge", "memory", "documents", "datasets", "media", "logs"):
         (external_root / name).mkdir(exist_ok=True)
-    return RobinStorage(brain_root=Path.cwd().resolve(), external_root=external_root)
+    return RobinStorage(brain_root=brain_root.resolve(), external_root=external_root)
