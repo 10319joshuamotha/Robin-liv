@@ -1,10 +1,4 @@
-"""Device-scoped operating state and capability gates for Robin.
-
-This module is intentionally independent of the UI, Gemini session, Android
-transport, and action registry. It is the foundation for enforcing privacy and
-sleep behavior in code rather than relying on model instructions.
-"""
-
+"""Device-scoped operating state and capability gates for Robin."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -26,8 +20,6 @@ class DeviceState(str, Enum):
 
 @dataclass(frozen=True)
 class CapabilitySnapshot:
-    """Capabilities available at one point in time."""
-
     screen_capture: bool
     microphone_processing: bool
     camera_capture: bool
@@ -36,18 +28,12 @@ class CapabilitySnapshot:
 
 
 class DeviceStateController:
-    """Thread-safe state machine for one Robin device client.
-
-    The controller deliberately exposes capabilities instead of asking callers
-    to interpret state strings. This makes it harder for a screen/camera/audio
-    feature to accidentally bypass a privacy or sleep restriction.
-    """
+    """Thread-safe state machine whose capability snapshot is deny-by-default."""
 
     def __init__(self, device: DeviceKind, initial: DeviceState | None = None) -> None:
         self.device = device
         self._lock = RLock()
         self._state = initial or DeviceState.ACTIVE
-
         if self.device is DeviceKind.PC and self._state is DeviceState.PRIVATE:
             raise ValueError("PC devices do not support phone Private Mode")
         if self.device is DeviceKind.PHONE and self._state is DeviceState.SLEEPING:
@@ -97,43 +83,26 @@ class DeviceStateController:
         if state is DeviceState.OFFLINE:
             return CapabilitySnapshot(False, False, False, False, False)
 
+        # PC sleep is a hard stop. Only the physical ESC wake path remains alive.
         if self.device is DeviceKind.PC and state is DeviceState.SLEEPING:
-            return CapabilitySnapshot(
-                screen_capture=False,
-                microphone_processing=False,
-                camera_capture=False,
-                assistant_processing=False,
-                keyboard_wake=True,
-            )
+            return CapabilitySnapshot(False, False, False, False, True)
 
+        # Phone Private Mode blocks every screen-derived path and camera capture.
+        # Voice interaction remains available unless the user separately mutes it.
         if self.device is DeviceKind.PHONE and state is DeviceState.PRIVATE:
-            return CapabilitySnapshot(
-                screen_capture=False,
-                microphone_processing=True,
-                camera_capture=True,
-                assistant_processing=True,
-                keyboard_wake=False,
-            )
+            return CapabilitySnapshot(False, True, False, True, False)
 
-        return CapabilitySnapshot(
-            screen_capture=True,
-            microphone_processing=True,
-            camera_capture=True,
-            assistant_processing=True,
-            keyboard_wake=False,
-        )
+        return CapabilitySnapshot(True, True, True, True, False)
 
     def allows(self, capability: str) -> bool:
-        """Return whether a named capability is currently permitted.
-
-        Unknown capabilities are denied instead of being implicitly allowed.
-        """
-
+        caps = self.capabilities()
         allowed = {
-            "screen_capture": self.capabilities().screen_capture,
-            "microphone_processing": self.capabilities().microphone_processing,
-            "camera_capture": self.capabilities().camera_capture,
-            "assistant_processing": self.capabilities().assistant_processing,
-            "keyboard_wake": self.capabilities().keyboard_wake,
+            "screen_capture": caps.screen_capture,
+            "screen_view": caps.screen_capture,
+            "screen_monitoring": caps.screen_capture,
+            "microphone_processing": caps.microphone_processing,
+            "camera_capture": caps.camera_capture,
+            "assistant_processing": caps.assistant_processing,
+            "keyboard_wake": caps.keyboard_wake,
         }
         return bool(allowed.get(capability, False))
