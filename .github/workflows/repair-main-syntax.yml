@@ -1,0 +1,46 @@
+name: Repair main.py syntax
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Repair the known syntax defect
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path("main.py")
+          text = p.read_text(encoding="utf-8")
+          old = '    },,\n    {\n        "name": "sleep_robin",'
+          new = '    },\n    {\n        "name": "sleep_robin",'
+          if old not in text:
+              raise SystemExit("Known main.py syntax defect was not found; refusing to modify anything.")
+          if text.count(old) != 1:
+              raise SystemExit("Expected exactly one known syntax defect; refusing to modify anything.")
+          p.write_text(text.replace(old, new), encoding="utf-8", newline="\n")
+          PY
+          python -m py_compile main.py
+      - name: Commit repaired main.py
+        shell: bash
+        run: |
+          if git diff --quiet -- main.py; then
+            echo "No repair needed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add main.py
+          git commit -m "Fix main.py tool declaration syntax"
+          git push
