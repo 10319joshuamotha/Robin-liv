@@ -1,7 +1,9 @@
 name: Robin validation
+
 on:
   push:
   pull_request:
+
 jobs:
   python:
     runs-on: ubuntu-latest
@@ -15,4 +17,4 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: python -m pip install --upgrade pip pytest
       - run: python -m compileall -q actions core memory plugins main.py ui.py setup.py
-      - run: pytest -q tests/test_self_development.py
+      - run: pytest -q tests
