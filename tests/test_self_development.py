@@ -25,6 +25,13 @@ index 1111111..2222222 100644
 +new
 """
     assert module._patch_paths(patch) == ["main.py"]
+
     second_file = patch + """diff --git a/ui.py b/ui.py
+index 3333333..4444444 100644
+--- a/ui.py
++++ b/ui.py
+@@ -1 +1 @@
+-old
++new
 """
     assert module._patch_paths(second_file) != ["main.py"]
