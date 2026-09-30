@@ -16,8 +16,14 @@ def _git(*args, check=True):
     return p.stdout.strip()
 
 def _safe(path):
-    p = Path(str(path)).as_posix().lstrip("./")
-    return bool(p) and ".." not in Path(p).parts and p.endswith(".py") and p not in PROTECTED and not Path(p).is_absolute()
+    raw = str(path).strip().replace("\\", "/")
+    if not raw or raw.startswith("/") or raw.startswith("~"):
+        return False
+    candidate = Path(raw)
+    if candidate.is_absolute() or ".." in candidate.parts:
+        return False
+    normalized = candidate.as_posix().lstrip("./")
+    return bool(normalized) and normalized.endswith(".py") and normalized not in PROTECTED
 
 def _clean():
     return _git("status", "--porcelain") == ""
@@ -91,7 +97,8 @@ def _apply():
             _git("restore", "--source=HEAD", "--", *py, check=False)
             return "Syntax validation failed. The changed file was rolled back."
         _git("add","--",*py)
-    _git("commit","-m","Robin self-development: approved change"); _pending = {"patch": "", "branch": "", "base_sha": "", "path": ""}
+    _git("commit","-m","Robin self-development: approved change")
+    _pending.update(patch="", branch="", base_sha="", path="")
     return "Approved change applied, syntax-checked, and committed on the Robin branch."
 
 TOOL = {"name":"self_development","description":"Inspect Robin source and propose code improvements. Any source-code change requires human confirmation before application. Protected confirmation, security, prompt, credential, and self-development files cannot be modified by this tool.","parameters":{"type":"OBJECT","properties":{"action":{"type":"STRING","description":"inspect | propose"},"path":{"type":"STRING","description":"Relative Python source path"},"goal":{"type":"STRING","description":"Desired improvement when action=propose"}},"required":["action"]},"handler":lambda parameters, **ctx: _inspect(parameters) if str(parameters.get("action","")).lower()=="inspect" else _propose(parameters)}
