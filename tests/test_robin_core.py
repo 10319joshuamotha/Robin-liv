@@ -26,13 +26,14 @@ class RobinCoreTests(unittest.TestCase):
         c.set_private_mode(True)
         self.assertFalse(c.allows("screen_capture"))
         self.assertTrue(c.allows("microphone_processing"))
+        self.assertTrue(c.allows("camera_capture"))
 
-    def test_policy_finance_requires_multistep(self):
+    def test_finance_is_hard_denied_even_after_multistep_verification(self):
         p = RobinPolicy()
         d = p.decide(Capability.FINANCE, authenticated=True)
         self.assertFalse(d.allowed)
-        self.assertEqual(d.required_authorization, AuthorizationLevel.MULTI_STEP)
-        self.assertTrue(p.decide(Capability.FINANCE, authenticated=True, multi_step_verified=True).allowed)
+        self.assertEqual(d.required_authorization, AuthorizationLevel.NONE)
+        self.assertFalse(p.decide(Capability.FINANCE, authenticated=True, multi_step_verified=True).allowed)
 
     def test_gallery_is_one_shot(self):
         p = RobinPolicy()
