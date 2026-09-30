@@ -1,0 +1,21 @@
+{
+  "edition": "Robin v1 PC-first foundation",
+  "runtime": {
+    "default_language": "English",
+    "offline_capable": true,
+    "pc_sleep_stops_runtime": true,
+    "phone_private_mode": true,
+    "animation_independent_toggle": true
+  },
+  "security": {
+    "finance": "hard_denied",
+    "gallery": "explicit_one_shot_grant",
+    "credentials": "explicit_confirmation",
+    "device_control": "explicit_confirmation"
+  },
+  "storage": {
+    "pc_core": "minimal_runtime_and_secrets_metadata",
+    "usb": "knowledge_models_memory_backups_and_portable_copy"
+  },
+  "status": "foundation_only_not_a_claim_of_full_device_integration"
+}
