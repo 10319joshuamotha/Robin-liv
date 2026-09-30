@@ -87,10 +87,10 @@ class DeviceStateController:
         if self.device is DeviceKind.PC and state is DeviceState.SLEEPING:
             return CapabilitySnapshot(False, False, False, False, True)
 
-        # Phone Private Mode blocks every screen-derived path and camera capture.
-        # Voice interaction remains available unless the user separately mutes it.
+        # Phone Private Mode blocks screen-derived access. Physical camera use is
+        # not screen access; gallery/media authorization is enforced separately.
         if self.device is DeviceKind.PHONE and state is DeviceState.PRIVATE:
-            return CapabilitySnapshot(False, True, False, True, False)
+            return CapabilitySnapshot(False, True, True, True, False)
 
         return CapabilitySnapshot(True, True, True, True, False)
 
