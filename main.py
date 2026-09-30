@@ -10,7 +10,7 @@ if _platform.system() == "Windows":
         def __init__(self, args, **kw):
             kw["creationflags"] = kw.get("creationflags", 0) | _subprocess.CREATE_NO_WINDOW
             kw.pop("startupinfo", None)   # drop any stale/shared STARTUPINFO
-            super().__init__(args, **                       kw)
+            super().__init__(args, **kw)
 
     _subprocess.Popen = _Popen
 
@@ -72,7 +72,7 @@ from actions.web_search        import _news as _fetch_news_sync
 from memory.config_manager     import (
     get_brief_enabled, get_media_resolution, get_proactive_audio_enabled,
     get_push_to_talk_enabled, get_thinking_enabled, get_turn_tuning, get_voice,
-    get_wake_word_enabled, save_wake_word_enabled,    get_input_device, get_output_device,
+    get_wake_word_enabled, save_wake_word_enabled, get_input_device, get_output_device,
 )
 from core.plugin_loader        import discover_plugins
 from core                      import undo as undo_stack
@@ -84,6 +84,16 @@ from core.viseme               import VisemeStream
 from core.wake_word            import (
     WakeWordDetector, is_ready as wake_is_ready, install_and_download as wake_install,
 )
+
+# Optional local/offline provider bridge. Gemini Live remains the default online
+# runtime until ROBIN_BRAIN=local is explicitly selected.
+try:
+    from core.runtime_mode import get_runtime_mode
+    from core.brain_provider import create_brain_provider
+except Exception:
+    get_runtime_mode = None
+    create_brain_provider = None
+
 
 # How long the assistant stays awake with no user speech before it auto-sleeps
 # again (wake-word mode only).
@@ -99,7 +109,7 @@ API_CONFIG_PATH = BASE_DIR / "config" / "api_keys.json"
 PROMPT_PATH     = BASE_DIR / "core" / "prompt.txt"
 LIVE_MODEL          = "models/gemini-3.1-flash-live-preview"
 CHANNELS            = 1
-SEND_SAMPLE_RATE    = 16000 
+SEND_SAMPLE_RATE    = 16000
 RECEIVE_SAMPLE_RATE = 24000
 CHUNK_SIZE          = 1024
 
@@ -293,7 +303,7 @@ def _load_system_prompt() -> str:
         return PROMPT_PATH.read_text(encoding="utf-8")
     except Exception:
         return (
-            "You are JARVIS, Tony Stark's AI assistant. "
+            "You are Robin, a personal AI assistant. "
             "Be concise, direct, and always use the provided tools to complete tasks. "
             "Never simulate or guess results — always call the appropriate tool."
         )
@@ -316,7 +326,7 @@ def _is_repeat_chunk(txt: str, buf: list) -> bool:
     joined = " ".join(buf)
     return txt in joined
 
-def _clean_transcript(text: str) -> str:    
+def _clean_transcript(text: str) -> str:
     text = _CTRL_RE.sub("", text)
     text = re.sub(r"[\x00-\x08\x0b-\x1f]", "", text)
     return text.strip()
@@ -540,7 +550,7 @@ def _keep_context_of(exc: BaseException) -> bool:
 class JarvisLive:
     def __init__(self, ui: JarvisUI):
         self.ui             = ui
-        self._asst_name     = "JARVI    S"   # updated each session from config
+        self._asst_name     = "Robin"   # updated each session from config
         self.session              = None
         self.audio_in_queue       = None
         self.out_queue            = None
@@ -576,6 +586,7 @@ class JarvisLive:
         # handed to the device far faster than they play, so "now" ran the lips
         # ahead of the words and cut every schedule short. 0 = nothing playing.
         self._play_cursor          = 0.0
+        self._conn_backoff         = 3       # seconds before the next reconnect attempt
         self.ui.on_push_to_talk   = self.set_push_to_talk
         self.ui.ptt_hold          = self._on_ptt
         self.ui.on_text_command   = self._on_text_command
@@ -608,6 +619,14 @@ class JarvisLive:
         self._proactive        = ProactiveEngine()
         self._last_user_speech = time.monotonic()  # updated on every user utterance
         self._session_log: list[str] = []          # conversation turns for end-of-session summary
+
+        self._runtime_mode = get_runtime_mode() if get_runtime_mode else None
+        self._local_brain = None
+        if self._runtime_mode and self._runtime_mode.brain in {"local", "ollama", "offline"}:
+            try:
+                self._local_brain = create_brain_provider("local") if create_brain_provider else None
+            except Exception as e:
+                print(f"[Local Brain] Provider unavailable: {e}")
 
         self._enhanced_live = True  # proactive audio; auto-disabled if the server rejects it
         self._tuned_live    = True  # turn-taking / media / thinking knobs; same fallback
@@ -735,7 +754,10 @@ class JarvisLive:
         self._awake = False
         self.set_speaking(False)
         self.ui.set_state("SLEEPING")
-        self.ui.write_log(f"SYS: Sleeping — {reason}. Say 'Robin' to wake me.")
+        if self._wake_enabled:
+            self.ui.write_log(f"SYS: Sleeping — {reason}. Say 'Robin' to wake me.")
+        else:
+            self.ui.write_log(f"SYS: Sleeping — {reason}. Press Escape to wake me.")
 
     async def _run_sleep_watch(self) -> None:
         """Auto-sleep after the configured silence window (wake-word mode only)."""
@@ -873,13 +895,42 @@ class JarvisLive:
         return url, key, f"{url}/auto-login?key={key}", manual
 
     def _on_text_command(self, text: str):
+        if not self._awake:
+            self.ui.write_log("SYS: I'm asleep — say 'Robin', press Escape or tap WAKE NOW first.")
+            return
+
+        # Explicit local mode: use the offline provider for typed commands.
+        # The existing Gemini Live audio path remains untouched.
+        if self._runtime_mode and self._runtime_mode.brain in {"local", "ollama", "offline"}:
+            if not self._local_brain:
+                self.ui.write_log("ERR: Local brain is selected but its provider is unavailable.")
+                return
+
+            def _local_reply():
+                try:
+                    result = self._local_brain.respond(
+                        text,
+                        system="You are Robin, a private personal AI assistant. "
+                               "Respond in concise natural English."
+                    )
+                    self.ui.write_log(f"ROBIN: {result.text}")
+                except Exception as e:
+                    self.ui.write_log(f"ERR: Local brain: {e}")
+
+            threading.Thread(
+                target=_local_reply,
+                daemon=True,
+                name="RobinLocalBrain",
+            ).start()
+            return
+
         if not self._loop or not self.session:
             return
-        # Respect wake-word sleep: a typed command must not be answered while
-        # asleep either (the sleep gate is not just for the mic). Wake first with
-        # "Robin" or the WAKE NOW button.
-        if self._wake_enabled and not self._awake:
-            self.ui.write_log("SYS: I'm asleep — say 'Robin' or tap WAKE NOW first.")
+        # Respect sleep: a typed command must not be answered while asleep
+        # either (the sleep gate is not just for the mic). Wake first with
+        # "Robin", Escape, or the WAKE NOW button.
+        if not self._awake:
+            self.ui.write_log("SYS: I'm asleep — say 'Robin', press Escape or tap WAKE NOW first.")
             return
         asyncio.run_coroutine_threadsafe(
             self.session.send_client_content(
@@ -911,7 +962,7 @@ class JarvisLive:
             self._out_level = 0.0
         if value:
             self.ui.set_state("SPEAKING")
-        elif not self.ui.muted:
+        elif not self.ui.muted and self._awake:
             self.ui.set_state("LISTENING")
 
     def set_push_to_talk(self, enabled: bool) -> str:
@@ -947,11 +998,16 @@ class JarvisLive:
         if held:
             # Holding the key is also a way to wake it, so push-to-talk works
             # without having to say the wake word first.
-            if self._wake_enabled and not self._awake:
+            if not self._awake:
                 self._awake = True
                 self._last_user_speech = time.monotonic()
         try:
-            self.ui.set_state("LISTENING" if held else "SLEEPING")
+            # On release, go back to whatever the assistant is really doing:
+            # listening if it is awake, sleeping only if it actually is asleep.
+            if held or (self._awake and not self.ui.muted):
+                self.ui.set_state("LISTENING")
+            else:
+                self.ui.set_state("SLEEPING")
         except Exception:
             pass
 
@@ -991,14 +1047,14 @@ class JarvisLive:
     def speak_error(self, tool_name: str, error: str):
         short = str(error)[:120]
         self.ui.write_log(f"ERR: {tool_name} — {short}")
-        self.speak(f"Sir, {tool_name} encountered an error. {short}")
+        self.speak(f"{tool_name} encountered an error. {short}")
 
     def _build_config(self) -> types.LiveConnectConfig:
         from datetime import datetime
 
         # Load customization from config
         try:
-            _cfg = json.loads(open(API_CONFIG_PATH, encoding="utf-8").read())
+            _cfg = json.loads(API_CONFIG_PATH.read_text(encoding="utf-8"))
             self._asst_name = (_cfg.get("assistant_name") or "Robin").strip()
             _user_name = (_cfg.get("user_name") or "").strip()
         except Exception:
@@ -1306,7 +1362,7 @@ class JarvisLive:
             traceback.print_exc()
             self.speak_error(name, e)
 
-        if not self.ui.muted:
+        if not self.ui.muted and self._awake:
             self.ui.set_state("LISTENING")
 
         print(f"[JARVIS] 📤 {name} → {str(result)[:80]}")
@@ -1346,16 +1402,18 @@ class JarvisLive:
         loop = asyncio.get_event_loop()
 
         def callback(indata, frames, time_info, status):
-            # ── Wake-word gate ───────────────────────────────────────────────
+            # ── Sleep gate ───────────────────────────────────────────────────
             # While asleep, the mic audio NEVER goes to Gemini (nothing is
-            # streamed, so JARVIS can't respond to speech not addressed to it and
-            # nothing leaves the machine). Frames are instead handed to the local
-            # detector, which runs its model in ITS OWN thread — the cost here is
-            # only a queue push, so the audio path is never slowed. When wake word
-            # is off (default) or we're awake, this is a single boolean check.
-            if self._wake_enabled and not self._awake:
+            # streamed, so Robin can't respond to speech not addressed to it and
+            # nothing leaves the machine). This applies to EVERY way of falling
+            # asleep — the wake-word timeout and the sleep_robin tool alike.
+            # If the local wake-word detector is running, the frames are handed
+            # to it instead; it runs its model in ITS OWN thread, so the cost
+            # here is only a queue push and the audio path is never slowed.
+            # When awake, this is a single boolean check.
+            if not self._awake:
                 det = self._wake_detector
-                if det is not None:
+                if self._wake_enabled and det is not None:
                     det.feed(indata)
                 return
             with self._speaking_lock:
@@ -2045,7 +2103,8 @@ class JarvisLive:
             self._phone_active = True   # phone is streaming — silence PC mic
             with self._speaking_lock:
                 speaking = self._is_speaking
-            if not speaking and not self.ui.muted:
+            # A sleeping Robin must not stream the phone's microphone either.
+            if not speaking and not self.ui.muted and self._awake:
                 try:
                     self.out_queue.put_nowait(chunk)
                 except asyncio.QueueFull:
@@ -2072,8 +2131,8 @@ class JarvisLive:
                     await asyncio.sleep(0.1)
                 if self.session:
                     # A remote command is deliberate control and the phone user
-                    # has no desktop WAKE button — so it wakes JARVIS if asleep.
-                    if self._wake_enabled and not self._awake:
+                    # has no desktop WAKE button — so it wakes Robin if asleep.
+                    if not self._awake:
                         self.wake(reason="remote command")
                     await self.session.send_client_content(
                         turns={"role": "user", "parts": [{"text": text}]},
@@ -2127,6 +2186,7 @@ class JarvisLive:
             self._dashboard = None
 
         while True:
+            _resumed_with = False
             try:
                 print("[JARVIS] Connecting...")
                 self.ui.set_state("THINKING")
@@ -2281,7 +2341,7 @@ class JarvisLive:
                     while not self.ui._win._ready:
                         await asyncio.sleep(1)
                     print("[JARVIS] New API key saved — reconnecting...")
-                    _conn_backoff = 3
+                    self._conn_backoff = 3
                     continue
 
                 # Network / timeout errors — log clearly and back off
@@ -2290,10 +2350,9 @@ class JarvisLive:
                     "ConnectionRefusedError", "OSError", "Cannot connect",
                 ))
                 if is_net_err:
-                    _conn_backoff = min(getattr(self, "_conn_backoff", 3) * 2, 60)
-                    self._conn_backoff = _conn_backoff
+                    self._conn_backoff = min(getattr(self, "_conn_backoff", 3) * 2, 60)
                     self.ui.write_log(
-                        f"NET: Connection failed — retrying in {_conn_backoff}s. "
+                        f"NET: Connection failed — retrying in {self._conn_backoff}s. "
                         "(a VPN may be required)"
                     )
                 else:
