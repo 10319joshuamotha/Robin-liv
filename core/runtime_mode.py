@@ -13,13 +13,18 @@ class RuntimeMode:
 
 
 def get_runtime_mode() -> RuntimeMode:
-    """Read explicit environment configuration without touching the network."""
-    brain = os.getenv("ROBIN_BRAIN", "local").strip().lower()
-    voice = os.getenv("ROBIN_VOICE", "local").strip().lower()
+    """Read explicit environment configuration without touching the network.
+
+    Online Gemini remains the safe default because Robin's established realtime
+    microphone/audio runtime is Gemini Live. Local/offline mode is opt-in until
+    the complete local STT/TTS audio path is wired and tested on the target PC.
+    """
+    brain = os.getenv("ROBIN_BRAIN", "online").strip().lower()
+    voice = os.getenv("ROBIN_VOICE", "online").strip().lower()
     if brain not in {"local", "ollama", "online", "gemini"}:
-        brain = "local"
+        brain = "online"
     if voice not in {"local", "offline", "online", "gemini"}:
-        voice = "local"
+        voice = "online"
     offline = brain in {"local", "ollama"} and voice in {"local", "offline"}
     return RuntimeMode(brain=brain, voice=voice, offline=offline)
 
