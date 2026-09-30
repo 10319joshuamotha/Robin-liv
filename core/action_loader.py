@@ -1,7 +1,6 @@
-"""
-Action discovery, validation, and policy-aware dispatch.
+"""Action discovery, validation, and policy-aware dispatch.
 
-Every actions/*.py module exposing TOOL is discovered here.  The registry is also
+Every actions/*.py module exposing TOOL is discovered here. The registry is also
 Robin's common enforcement boundary: sensitive actions are checked against the
 central RobinPolicy before a handler is invoked.
 """
@@ -19,38 +18,38 @@ from typing import Callable, Optional
 from core.robin_policy import Capability, RobinPolicy
 
 _NAME_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]{0,63}$")
+_TOKEN_RE = re.compile(r"[a-z0-9]+")
 _DEFAULT_PARAMS = {"type": "OBJECT", "properties": {}}
 _CTX_KEYS = ("player", "speak", "response", "session_memory")
 _BEHAVIORS = ("BLOCKING", "NON_BLOCKING")
 _SCHEDULING = ("WHEN_IDLE", "SILENT", "INTERRUPT")
 
-# Action names are deliberately conservative.  Unknown actions remain subject to
-# the existing application behavior; only actions that clearly cross one of
-# Robin's protected boundaries are mapped here.
-_FINANCE_WORDS = ("payment", "payments", "gpay", "bank", "banking", "upi", "wallet", "transfer_money", "send_money", "pay")
-_GALLERY_WORDS = ("gallery", "photo", "photos", "picture", "pictures", "camera_roll", "google_photos")
-_SCREEN_WORDS = ("screen", "screenshot", "screen_capture", "screen_record", "screen_process")
-_PC_CONTROL_WORDS = ("shutdown", "restart", "sleep_pc", "poweroff", "system_control")
-_PHONE_CONTROL_WORDS = ("phone_control", "send_document", "cast_screen", "remote_phone")
+# Legacy action names are mapped conservatively. New actions should set the
+# explicit `capability` field in TOOL instead of relying on name inference.
+_NAME_CAPABILITIES = {
+    "finance": ("payment", "payments", "gpay", "bank", "banking", "upi", "wallet", "transfer_money", "send_money", "pay"),
+    "gallery": ("gallery", "photo", "photos", "picture", "pictures", "camera_roll", "google_photos"),
+    "screen": ("screen", "screenshot", "screen_capture", "screen_record", "screen_process"),
+    "pc_control": ("shutdown", "restart", "sleep_pc", "poweroff", "system_control"),
+    "phone_control": ("phone_control", "send_document", "cast_screen", "remote_phone"),
+}
 
 
-def _capability_for_action(name: str) -> Capability | None:
-    n = name.lower()
-    if any(x in n for x in _FINANCE_WORDS):
-        return Capability.FINANCE
-    if any(x in n for x in _GALLERY_WORDS):
-        return Capability.GALLERY
-    if any(x in n for x in _SCREEN_WORDS):
-        return Capability.SCREEN
-    if any(x in n for x in _PC_CONTROL_WORDS):
-        return Capability.PC_CONTROL
-    if any(x in n for x in _PHONE_CONTROL_WORDS):
-        return Capability.PHONE_CONTROL
+def _capability_for_action(name: str, declared: str | None = None) -> Capability | None:
+    if declared:
+        try:
+            return Capability(str(declared).strip().lower())
+        except ValueError:
+            return None
+    tokens = set(_TOKEN_RE.findall(name.lower()))
+    for capability, words in _NAME_CAPABILITIES.items():
+        if tokens.intersection(words):
+            return Capability(capability)
     return None
 
 
-def _policy_decision(policy: RobinPolicy, name: str, ctx: dict) -> tuple[bool, str]:
-    capability = _capability_for_action(name)
+def _policy_decision(policy: RobinPolicy, name: str, ctx: dict, declared: str | None = None) -> tuple[bool, str]:
+    capability = _capability_for_action(name, declared)
     if capability is None:
         return True, ""
     decision = policy.decide(
@@ -80,6 +79,7 @@ class ActionRecord:
     error: str = ""
     behavior: Optional[str] = None
     scheduling: Optional[str] = None
+    capability: Optional[str] = None
 
 
 class ActionRegistry:
@@ -95,6 +95,10 @@ class ActionRegistry:
             decl = {"name": rec.name, "description": rec.description, "parameters": rec.parameters}
             if rec.behavior:
                 decl["behavior"] = rec.behavior
+            if rec.scheduling:
+                decl["scheduling"] = rec.scheduling
+            if rec.capability:
+                decl["capability"] = rec.capability
             out.append(decl)
         return out
 
@@ -113,7 +117,7 @@ class ActionRegistry:
         if rec is None or not rec.valid:
             return f"Action '{name}' is not available."
         context = ctx or {}
-        allowed, reason = _policy_decision(self._policy, name, context)
+        allowed, reason = _policy_decision(self._policy, name, context, rec.capability)
         if not allowed:
             self._logger(f"POLICY BLOCK: {name} — {reason}")
             return f"Action '{name}' blocked by Robin security policy: {reason}"
@@ -151,11 +155,18 @@ def _validate(module, filename: str) -> ActionRecord:
     handler = tool.get("handler")
     if not callable(handler):
         return ActionRecord(name=name, file=filename, error="TOOL['handler'] missing or not callable.")
+    declared_capability = tool.get("capability")
+    if declared_capability is not None:
+        try:
+            declared_capability = Capability(str(declared_capability).strip().lower()).value
+        except ValueError:
+            return ActionRecord(name=name, file=filename, error="TOOL['capability'] is not a supported Robin capability.")
     return ActionRecord(
         name=name, description=description.strip(), parameters=parameters,
         handler=handler, file=filename, valid=True, error="",
         behavior=_opt_upper(tool.get("behavior"), _BEHAVIORS),
         scheduling=_opt_upper(tool.get("scheduling"), _SCHEDULING),
+        capability=declared_capability,
     )
 
 
