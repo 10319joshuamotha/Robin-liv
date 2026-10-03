@@ -1,7 +1,8 @@
-"""Correlate explicit visual observations with Robin's current task.
+"""Correlate explicitly permitted visual observations with Robin's task.
 
-This is the bridge between GEV perception and action execution. It records
-only local observation metadata (not image bytes) in SpatialContext.
+This is the bridge between GEV perception and action execution. It records only
+local observation metadata (not image bytes) in SpatialContext. GEV must be
+explicitly enabled; Private Mode and PC Sleep always override it.
 """
 from __future__ import annotations
 
@@ -12,6 +13,8 @@ from core.spatial_context import spatial_context
 
 def observation_context(parameters: dict, **ctx) -> str:
     controller = get_pc_controller()
+    if not spatial_context.gev_enabled:
+        return "Observation context blocked: God's Eye View is OFF. Enable it for this task first."
     if not controller.allows("screen_capture"):
         return "Observation context blocked: PC screen capability is disabled."
     if bool(ctx.get("private_mode", False)):
@@ -54,8 +57,9 @@ TOOL = {
     "name": "observation_context",
     "description": (
         "Correlate one explicitly permitted local visual observation with Robin's "
-        "current task and optional selected UI element. This records metadata only; "
-        "it never captures a screen and cannot bypass Private Mode or PC Sleep."
+        "current task and optional selected UI element. GEV must be enabled first. "
+        "This tool records metadata only; it never captures a screen and cannot "
+        "bypass Private Mode or PC Sleep."
     ),
     "parameters": {
         "type": "OBJECT",
