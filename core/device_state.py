@@ -106,3 +106,20 @@ class DeviceStateController:
             "keyboard_wake": caps.keyboard_wake,
         }
         return bool(allowed.get(capability, False))
+
+
+# Shared controllers make capability gates consistent across action modules.
+_pc_controller = DeviceStateController(DeviceKind.PC)
+_phone_controller = DeviceStateController(DeviceKind.PHONE)
+
+
+def get_device_controller(device: DeviceKind) -> DeviceStateController:
+    return _pc_controller if device is DeviceKind.PC else _phone_controller
+
+
+def get_pc_controller() -> DeviceStateController:
+    return _pc_controller
+
+
+def get_phone_controller() -> DeviceStateController:
+    return _phone_controller
