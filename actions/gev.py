@@ -13,6 +13,8 @@ def _run(parameters: dict, **_) -> str:
         return spatial_context.prompt_context()
     if op == "task":
         task = str(parameters.get("task", "")).strip()
+        if not spatial_context.gev_enabled:
+            return "God's Eye View is OFF. Enable it before setting visual task context."
         spatial_context.set_task(task)
         return "GEV task context updated." if task else "GEV task context cleared."
     if op == "clear":
@@ -24,7 +26,7 @@ def _run(parameters: dict, **_) -> str:
 
 TOOL = {
     "name": "gev_control",
-    "description": "Turn Robin's God's Eye View situational context on or off explicitly, inspect status, set a task context, or clear context. GEV is off by default and never captures anything by itself.",
+    "description": "Explicitly turn Robin's God's Eye View situational context on or off, inspect status, set a task context, or clear context. GEV is off by default and never captures anything by itself.",
     "parameters": {
         "type": "OBJECT",
         "properties": {
