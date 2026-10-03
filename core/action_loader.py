@@ -17,6 +17,7 @@ from typing import Callable, Optional
 
 from core.robin_policy import Capability, RobinPolicy
 from core.device_state import get_pc_controller
+from core.spatial_context import spatial_context
 
 _NAME_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]{0,63}$")
 _TOKEN_RE = re.compile(r"[a-z0-9]+")
@@ -24,7 +25,6 @@ _DEFAULT_PARAMS = {"type": "OBJECT", "properties": {}}
 _CTX_KEYS = ("player", "speak", "response", "session_memory")
 _BEHAVIORS = ("BLOCKING", "NON_BLOCKING")
 _SCHEDULING = ("WHEN_IDLE", "SILENT", "INTERRUPT")
-
 _NAME_CAPABILITIES = {
     "finance": ("payment", "payments", "gpay", "bank", "banking", "upi", "wallet", "transfer_money", "send_money", "pay"),
     "gallery": ("gallery", "photo", "photos", "picture", "pictures", "camera_roll", "google_photos"),
@@ -51,13 +51,11 @@ def _policy_decision(policy: RobinPolicy, name: str, ctx: dict, declared: str | 
     capability = _capability_for_action(name, declared)
     if capability is None:
         return True, ""
-
-    # Device-state is a second, independent gate. The model/policy cannot
-    # re-enable a capability that the device controller has disabled.
     if capability is Capability.SCREEN:
+        if not spatial_context.gev_enabled:
+            return False, "God's Eye View is OFF"
         if not get_pc_controller().allows("screen_capture"):
             return False, "PC screen capability is disabled by device state"
-
     decision = policy.decide(
         capability,
         authenticated=bool(ctx.get("authenticated", False)),
