@@ -1,8 +1,8 @@
-"""God's Eye View-style situational-context tools for Robin.
+"""On-demand God's Eye View-style situational-context tools for Robin.
 
-These tools expose the local layered context store to Robin's normal action
-registry. They do not capture a screen, camera, GPS position, or identify a
-person. Protected states are enforced by core.spatial_context itself.
+GEV is user-controlled and OFF by default. These tools never capture a screen,
+camera, GPS position, or identify a person. Protected states always override
+GEV and clear visual/selection context.
 """
 from __future__ import annotations
 
@@ -11,6 +11,16 @@ from core.spatial_context import spatial_context
 
 def _get_context(parameters: dict, **_) -> str:
     return spatial_context.prompt_context()
+
+
+def _set_gev(parameters: dict, **_) -> str:
+    raw = parameters.get("enabled")
+    if isinstance(raw, bool):
+        enabled = raw
+    else:
+        enabled = str(raw).strip().lower() in {"on", "true", "yes", "enable", "enabled"}
+    spatial_context.set_gev(enabled)
+    return f"God's Eye View is now {'ON' if spatial_context.gev_enabled else 'OFF'}."
 
 
 def _set_task(parameters: dict, **_) -> str:
@@ -32,7 +42,7 @@ def _select_entity(parameters: dict, **_) -> str:
         attributes = {"value": str(attributes)}
     if spatial_context.select_entity(entity_id, kind, label, **attributes):
         return f"Selected local context item: {label} ({kind})."
-    return "Selection was blocked because Robin is in Private Mode or PC Sleep."
+    return "Selection was blocked because GEV is off, Private Mode is active, or the PC is sleeping."
 
 
 def _clear_context(parameters: dict, **_) -> str:
@@ -44,17 +54,19 @@ def _clear_context(parameters: dict, **_) -> str:
 TOOL = {
     "name": "situational_context",
     "description": (
-        "Read or update Robin's local layered situational context. Use this for "
-        "current task state and explicitly selected local UI/items. It does not "
-        "capture screens or cameras and never bypasses Private Mode or PC Sleep."
+        "Control or read Robin's on-demand local situational context. GEV is "
+        "OFF by default and should be enabled only when useful for the current "
+        "task. It never captures screens or cameras itself and never bypasses "
+        "Private Mode or PC Sleep."
     ),
     "parameters": {
         "type": "OBJECT",
         "properties": {
             "operation": {
                 "type": "STRING",
-                "description": "get_context, set_task, select_entity, or clear"
+                "description": "get_context, set_gev, set_task, select_entity, or clear"
             },
+            "enabled": {"type": "BOOLEAN"},
             "task": {"type": "STRING"},
             "entity_id": {"type": "STRING"},
             "kind": {"type": "STRING"},
@@ -65,6 +77,7 @@ TOOL = {
     },
     "handler": lambda parameters, **ctx: {
         "get_context": _get_context,
+        "set_gev": _set_gev,
         "set_task": _set_task,
         "select_entity": _select_entity,
         "clear": _clear_context,
