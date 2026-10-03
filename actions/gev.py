@@ -36,5 +36,4 @@ TOOL = {
         "required": ["operation"],
     },
     "handler": _run,
-    "capability": "screen",
 }
