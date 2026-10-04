@@ -2,6 +2,7 @@ name: Restore Robin runtime
 
 on:
   push:
+    branches: [main]
 
 permissions:
   contents: write
