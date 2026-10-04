@@ -1,8 +1,14 @@
 from core.spatial_context import SpatialContext
 
 
-def test_task_and_selection_are_available_when_active():
+def active_context() -> SpatialContext:
     context = SpatialContext()
+    assert context.set_gev(True)
+    return context
+
+
+def test_task_and_selection_are_available_when_active():
+    context = active_context()
     context.set_task("rename the selected folder")
     assert context.select_entity("folder-1", "folder", "Robin")
 
@@ -13,7 +19,7 @@ def test_task_and_selection_are_available_when_active():
 
 
 def test_private_mode_clears_visual_and_selection_context():
-    context = SpatialContext()
+    context = active_context()
     context.set_task("work privately")
     assert context.select_entity("tab-1", "browser_tab", "Private tab")
 
@@ -28,7 +34,7 @@ def test_private_mode_clears_visual_and_selection_context():
 
 
 def test_pc_sleep_clears_visual_context_and_blocks_selection():
-    context = SpatialContext()
+    context = active_context()
     context.set_layer("screen", [{"kind": "desktop_observation"}])
     assert context.select_entity("window-1", "window", "Browser")
 
