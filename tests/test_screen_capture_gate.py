@@ -18,7 +18,7 @@ def test_direct_screen_capture_reaches_backend_when_gev_is_on(monkeypatch):
     monkeypatch.setattr(
         screen_processor,
         "_compress",
-        lambda data, fmt="PNG": (b"ok", "image/jpeg"),
+        lambda data, source_format="PNG": (b"ok", "image/jpeg"),
     )
 
     class FakeMSS:
@@ -33,9 +33,9 @@ def test_direct_screen_capture_reaches_backend_when_gev_is_on(monkeypatch):
         def grab(self, target):
             return type("Shot", (), {"rgb": b"rgb", "size": (1, 1)})()
 
-    # screen_processor imports the mss module directly, so patch the module's
-    # constructor rather than expecting a nested screen_processor.mss.mss API.
-    monkeypatch.setattr(screen_processor.mss, "mss", lambda: FakeMSS())
-    monkeypatch.setattr(screen_processor.mss.tools, "to_png", lambda rgb, size: b"png")
+    # screen_processor imports mss as a module; patch that module directly.
+    import mss as mss_module
+    monkeypatch.setattr(mss_module, "mss", lambda: FakeMSS())
+    monkeypatch.setattr(mss_module.tools, "to_png", lambda rgb, size: b"png")
 
     assert screen_processor._capture_screen() == (b"ok", "image/jpeg")
