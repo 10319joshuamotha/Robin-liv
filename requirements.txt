@@ -1,73 +1,43 @@
 # ── ROBIN — Python dependencies ──────────────────────────────────────────────
-# One dependency file for Windows, macOS and Linux. Platform-specific packages
-# are guarded with environment markers.
-#
-# Heavy/local model packages remain optional where practical so a fresh clone can
-# start without downloading hundreds of MB before the user chooses a voice/model.
-
-# ── Core: UI, audio, Gemini Live ──────────────────────────────────────────────
 PyQt6>=6.6,<7
 sounddevice>=0.4,<1
 numpy>=1.24,<3
 google-genai>=2.8.0,<3
-
-# ── Web search & browser control ──────────────────────────────────────────────
 requests>=2.31,<3
 beautifulsoup4>=4.12,<5
 playwright>=1.40,<2
-
-# ── Automation / input control ────────────────────────────────────────────────
 pyautogui
 pyperclip
 pygetwindow
-
-# ── Vision & media ────────────────────────────────────────────────────────────
 pillow>=10,<13
 opencv-python>=4.8,<5
 mss>=9,<11
-
-# ── System, files & documents ─────────────────────────────────────────────────
 psutil>=5.9,<8
 send2trash
 youtube-transcript-api
 python-pptx
 openpyxl
-
-# ── Remote dashboard / phone bridge ───────────────────────────────────────────
 fastapi>=0.110,<1
 uvicorn[standard]>=0.27,<1
 cryptography>=42,<50
 python-multipart>=0.0.9,<1
 qrcode[pil]>=7,<9
-
-# ── Optional cloud integrations ───────────────────────────────────────────────
 google-api-python-client
 google-auth-oauthlib
-
 tinytuya
-
-# ── Windows-only ──────────────────────────────────────────────────────────────
-comtypes;   sys_platform == "win32"
-pycaw;      sys_platform == "win32"
+comtypes; sys_platform == "win32"
+pycaw; sys_platform == "win32"
 win10toast; sys_platform == "win32"
-pywinauto;  sys_platform == "win32"
-pywin32;    sys_platform == "win32"
-wmi;        sys_platform == "win32"
-
-# ── Documents / hardware ──────────────────────────────────────────────────────
+pywinauto; sys_platform == "win32"
+pywin32; sys_platform == "win32"
+wmi; sys_platform == "win32"
 ddgs>=9,<10
 pdfplumber
 PyPDF2
 python-docx
 paho-mqtt
 pynvml
-
-# ── Optional heavy extras ─────────────────────────────────────────────────────
-# pip install pandas
-# pip install pydub
-# pip install mediapipe
-
-# ── Local voice / wake-word foundation ────────────────────────────────────────
 faster-whisper>=1.1,<2
-# openwakeword is optional until its local wake-word model is provisioned.
-# Install with: pip install openwakeword
+piper-tts>=1.2,<2
+soundfile>=0.12,<1
+# openwakeword remains optional until a local wake-word model is provisioned.
