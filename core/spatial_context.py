@@ -70,6 +70,13 @@ class SpatialContext:
             self._updated = time.time()
             return self._gev_enabled
 
+    def disable_gev(self) -> None:
+        """Explicitly release all visual/selection context."""
+        with self._lock:
+            self._gev_enabled = False
+            self._clear_visual()
+            self._updated = time.time()
+
     def set_privacy(self, *, private_mode: bool, sleeping: bool = False) -> None:
         with self._lock:
             self._private = bool(private_mode)
